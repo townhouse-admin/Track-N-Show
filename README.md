@@ -1,7 +1,7 @@
 # Track-N-Show: TH-1 Infrastructure & AI Toolkit Map
 
-> **Syfte:** Dokumentera TH-1-servern, dess konfiguration och ett kurerat AI-verktygsbibliotek
-> **Server:** townhouse-8gb-one | **Tailscale IP:** 100.91.241.68 | **Senast uppdaterad:** 2026-04-16
+> **Syfte:** Dokumentera TH-1-servern och ett kurerat AI-verktygsbibliotek.
+> Känsliga detaljer (IPs, portar, tokens) förvaras **aldrig** i detta repo — se intern wiki.
 
 ---
 
@@ -9,7 +9,7 @@
 
 | Dokument | Beskrivning |
 |----------|-------------|
-| [SERVER_MAP_TH1.md](./SERVER_MAP_TH1.md) | Komplett serverkartering för TH-1 |
+| [SERVER_MAP_TH1.md](./SERVER_MAP_TH1.md) | Serverkartering för TH-1 (desensitiserad) |
 | [docs/MCP_SERVER_SETUP.md](./docs/MCP_SERVER_SETUP.md) | GitHub MCP Server setup via Tailscale |
 | [docs/AZURE_DEVOPS_TOP20.md](./docs/AZURE_DEVOPS_TOP20.md) | Top 20: Azure DevOps resurser |
 | [docs/AWESOME_AGENTS_TOP20.md](./docs/AWESOME_AGENTS_TOP20.md) | Top 20: AI Agent frameworks |
@@ -29,21 +29,14 @@
 │                    TH-1 (townhouse-8gb-one)                 │
 │                   Hetzner vServer — Ubuntu 24.04            │
 │                                                             │
-│  Tailscale IP: 100.91.241.68                                │
-│  Public IP:    204.168.246.143                              │
-│                                                             │
 │  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐  │
 │  │   Caddy      │  │  god-tool    │  │ github-mcp-     │  │
-│  │  Port 80     │  │  Port 3000   │  │ server Port 3100│  │
-│  │  (Reverse    │  │  (Dashboard) │  │ (MCP via SSE)   │  │
-│  │   Proxy)     │  │  Node.js/PM2 │  │ Docker/PM2      │  │
+│  │  HTTP proxy  │  │  Dashboard   │  │ server (SSE)    │  │
+│  │  (port fwd)  │  │  Node.js/PM2 │  │ Docker/PM2      │  │
 │  └──────────────┘  └──────────────┘  └─────────────────┘  │
 │                                                             │
-│  Tailscale Network Members:                                 │
-│  • townhouse-8gb-one (100.91.241.68) ◄── DEN HÄR           │
-│  • townhouseadmin    (100.80.88.74)                         │
-│  • iver-7vrk6m3      (100.114.112.107)                      │
-│  • demo              (100.119.175.112)                      │
+│  Tailscale-nätverket: 4 aktiva noder                        │
+│  (se intern wiki för IP-detaljer)                           │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -51,13 +44,14 @@
 
 ## 🤖 AI Toolkit Stack (Kurerat)
 
-### Aktiva på TH-1
-| Service | URL | Status |
-|---------|-----|--------|
-| GitHub MCP Server (SSE) | `http://100.91.241.68:3100/sse` | ✅ Online |
-| God-Tool Dashboard | `http://100.91.241.68:3000` / `http://100.91.241.68` | ✅ Online |
+### Aktiva tjänster på TH-1
 
-### Top Resources per Kategori
+| Service | Åtkomst | Status |
+|---------|---------|--------|
+| GitHub MCP Server (SSE) | Via Tailscale — se intern wiki | ✅ Online |
+| God-Tool Dashboard | Via Tailscale — se intern wiki | ✅ Online |
+
+### Resources per kategori
 
 ```
 Azure DevOps ──────► 20 resurser  [docs/AZURE_DEVOPS_TOP20.md]
@@ -74,18 +68,19 @@ Copilot Agents ────► 20 agenter   [docs/COPILOT_AGENTS_TOP20.md]
 
 ## 🔌 MCP Server Snabbstart
 
-```bash
-# Anslut via Claude Code (kräver Tailscale)
-# Lägg till i ~/.claude.json:
+```json
+// Lägg till i din MCP-klientkonfig (kräver Tailscale-anslutning)
 {
   "mcpServers": {
     "github": {
       "type": "sse",
-      "url": "http://100.91.241.68:3100/sse"
+      "url": "http://<TH1_TAILSCALE_IP>:<MCP_PORT>/sse"
     }
   }
 }
 ```
+
+> Hämta `<TH1_TAILSCALE_IP>` och `<MCP_PORT>` från intern wiki eller fråga repo-ägaren.
 
 Se [docs/MCP_SERVER_SETUP.md](./docs/MCP_SERVER_SETUP.md) för fullständig setup-guide.
 
@@ -95,32 +90,44 @@ Se [docs/MCP_SERVER_SETUP.md](./docs/MCP_SERVER_SETUP.md) för fullständig setu
 
 ```mermaid
 graph TD
-    A[Du - Tailscale-ansluten] -->|http://100.91.241.68:3100/sse| B[GitHub MCP Server]
-    A -->|http://100.91.241.68| C[God-Tool Dashboard]
-    
+    A[Du — Tailscale-ansluten] -->|SSE via Tailscale| B[GitHub MCP Server på TH-1]
+    A -->|HTTP via Tailscale| C[God-Tool Dashboard på TH-1]
+
     B --> D[Docker Container<br/>ghcr.io/github/github-mcp-server]
     D -->|GitHub API| E[api.github.com]
-    
+
     C --> F[Node.js / Express<br/>PM2 Process]
-    
-    G[Caddy Reverse Proxy :80] --> C
-    
-    subgraph TH1["TH-1 Server (100.91.241.68)"]
+
+    G[Caddy Reverse Proxy] --> C
+
+    subgraph TH1["TH-1 Server (Hetzner)"]
         B
         C
         D
         F
         G
     end
-    
-    subgraph Tailscale["Tailscale Network"]
+
+    subgraph Tailscale["Tailscale Network (privat)"]
         A
-        H[townhouseadmin<br/>100.80.88.74]
-        I[iver-7vrk6m3<br/>100.114.112.107]
+        H[Admin-nod]
+        I[Övriga noder]
         TH1
     end
 ```
 
 ---
 
-*Genererat av Claude Code (Sonnet 4.6) — 2026-04-16*
+## 🔒 Säkerhetspolicy för detta repo
+
+- **Inga IPs** — varken publika eller privata/Tailscale
+- **Inga portar** — använd tjänstnamn istället
+- **Inga tokens/credentials** — inte ens i kommentarer
+- **Inga sökvägar** — inga absoluta filsystemssökvägar
+- **Inga nodnamn** — Tailscale-nodnamn är interna
+
+Brott mot ovanstående fångas automatiskt av [`.github/workflows/secret-scan.yml`](./.github/workflows/secret-scan.yml).
+
+---
+
+*Genererat av Claude Code — 2026-04-16*
