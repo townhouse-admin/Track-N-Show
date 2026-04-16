@@ -35,7 +35,7 @@ Du (Tailscale-ansluten)
 
 ```bash
 # Docker
-bash /root/get-docker.sh
+bash get-docker.sh
 
 # PM2 + supergateway
 npm install -g pm2 supergateway
@@ -44,7 +44,7 @@ npm install -g pm2 supergateway
 docker pull ghcr.io/github/github-mcp-server
 ```
 
-### Startskript (`/root/start-mcp.sh`)
+### Startskript (`~/start-mcp.sh`)
 
 ```bash
 #!/bin/bash
@@ -60,12 +60,12 @@ supergateway \
   --cors
 ```
 
-> Sätt `GITHUB_PAT`, `MCP_PORT` och `TH1_TAILSCALE_IP` i `/root/.env` — **inte** i skriptet.
+> Sätt `GITHUB_PAT`, `MCP_PORT` och `TH1_TAILSCALE_IP` i `~/.env` — **inte** i skriptet.
 
 ### Starta med PM2
 
 ```bash
-pm2 start /root/start-mcp.sh --name github-mcp-server
+pm2 start ~/start-mcp.sh --name github-mcp-server
 pm2 save
 pm2 startup
 ```
